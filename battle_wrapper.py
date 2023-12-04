@@ -92,14 +92,51 @@ class BattleWrapper():
         current_screen = self.pyboy.get_memory_value(0xCC29)
         # 17 - battle screen
         # 3 - select a pokemon
-        while current_screen not in screens:
+        tile_bit_value = self.pyboy.get_memory_value(0xc4fc)
+        # 125 - battle screen
+        # 122 - otherwise
+        while current_screen not in screens or (17 in screens and current_screen == 17 and tile_bit_value != 125):
             self.press_and_release('a')
             current_screen = self.pyboy.get_memory_value(0xCC29)
-        # tick a few more times for good measure
-        for i in range(5):
-            self.pyboy.tick()
+            tile_bit_value = self.pyboy.get_memory_value(0xc4fc)
+        
+        self.pyboy.tick()
+        self.pyboy.tick()
+        if current_screen == 3:
+            # tick a few more times for good measure
+            for i in range(6):
+                self.pyboy.tick()
+
+    """
+    If you won the battle, return 1. If you lost, the battle, return -1. Else, return 0
+    """
+    def is_battle_over(self):
+        if sum([p['current_hp'] for p in self.get_player_pokemon_info()]) == 0:
+            return -1
+        elif sum([p['current_hp'] for p in self.get_enemy_pokemon_info()]) == 0:
+            return 1
+        return 0
+
 
     def get_player_pokemon_info(self):
+        pokemon_info = []
+        offsets = [0xD16B, 0xD197, 0xD1C3, 0xD1EF, 0xD21B, 0xD247]
+        for o in offsets:
+            pokemon_info.append({
+                "name": self.get_pokemon_name(self.pyboy.get_memory_value(o + 0)),
+                "level": self.pyboy.get_memory_value(o + 33),
+                "type1": self.pyboy.get_memory_value(o + 5),
+                "type2": self.pyboy.get_memory_value(o + 6),
+                "current_hp": self.pyboy.get_memory_value(o + 1) * 256 + self.pyboy.get_memory_value(o + 2),
+                "max_hp": self.pyboy.get_memory_value(o + 34) * 256 + self.pyboy.get_memory_value(o + 35),
+                "move1": self.get_move_info(self.pyboy.get_memory_value(o + 8)),
+                "move2": self.get_move_info(self.pyboy.get_memory_value(o + 9)),
+                "move3": self.get_move_info(self.pyboy.get_memory_value(o + 10)),
+                "move4": self.get_move_info(self.pyboy.get_memory_value(o + 11)),
+            })
+        return pokemon_info
+
+    def get_enemy_pokemon_info(self):
         pokemon_info = []
         offsets = [0xD16B, 0xD197, 0xD1C3, 0xD1EF, 0xD21B, 0xD247]
         for o in offsets:

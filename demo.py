@@ -15,17 +15,24 @@ pyboy.set_memory_value(0xD355, 0b11000000)
 if (not DEMO_MODE):
     while True:
         pyboy.tick()
+        wrapper.debug_print(0xc4fc)
+        #0xc4b9, one of the text bits
+        #0xc4f2, bottom right where the cursor is blinking
+        #0xc4fc, very bottom tile - 125 in battle screen, 122 otherwise
         
 
 while True:
     num = int(input("Input an action 1-10 (0 to stop): "))
     if num == 0: break
-    if num == 11:
+    elif num == 11:
         print("Gained control for 10 seconds...")
         for i in range(600):
             pyboy.tick()
-    if num == 12:
+    elif num == 12:
         print("Ticking once...")
         pyboy.tick() # once, for debugging
-    wrapper.act(num)
+        for i in range(0xC3A0, 0xC507):
+            wrapper.debug_print(i)
+    else:
+        wrapper.act(num)
 pyboy.stop()

@@ -1,4 +1,5 @@
 from pyboy import PyBoy, WindowEvent
+import constants
 
 inputs = {
     'left': [WindowEvent.PRESS_ARROW_LEFT, WindowEvent.RELEASE_ARROW_LEFT],
@@ -18,10 +19,9 @@ class BattleWrapper():
     def __init__(self, pyboy):
         self.pyboy = pyboy
 
-    # Tick by one frame and print any debugging information
-    def debug_tick(self):
-        self.pyboy.tick()
-        # do debugging things
+    # print any debugging information
+    def debug_print(self, memaddr):
+        print(f"{hex(memaddr)}: {self.pyboy.get_memory_value(memaddr)}")
 
     # Press a button, tick, and release the button
     def press_and_release(self, input):
@@ -95,7 +95,37 @@ class BattleWrapper():
         while current_screen not in screens:
             self.press_and_release('a')
             current_screen = self.pyboy.get_memory_value(0xCC29)
-        # tick one more time for good measure
-        self.pyboy.tick()
+        # tick a few more times for good measure
+        for i in range(5):
+            self.pyboy.tick()
+
+    def get_player_pokemon_info(self):
+        pokemon_info = []
+        offsets = [0xD16B, 0xD197, 0xD1C3, 0xD1EF, 0xD21B, 0xD247]
+        for o in offsets:
+            pokemon_info.append({
+                "name": self.get_pokemon_name(self.pyboy.get_memory_value(o + 0)),
+                "level": self.pyboy.get_memory_value(o + 33),
+                "type1": self.pyboy.get_memory_value(o + 5),
+                "type2": self.pyboy.get_memory_value(o + 6),
+                "current_hp": self.pyboy.get_memory_value(o + 1) * 256 + self.pyboy.get_memory_value(o + 2),
+                "max_hp": self.pyboy.get_memory_value(o + 34) * 256 + self.pyboy.get_memory_value(o + 35),
+                "move1": self.get_move_info(self.pyboy.get_memory_value(o + 8)),
+                "move2": self.get_move_info(self.pyboy.get_memory_value(o + 9)),
+                "move3": self.get_move_info(self.pyboy.get_memory_value(o + 10)),
+                "move4": self.get_move_info(self.pyboy.get_memory_value(o + 11)),
+            })
+        return pokemon_info
+        
+    def get_move_info(self, moveID):
+        move_info = [constants.moves_list[moveID-1]]
+        move_info.extend(constants.moves[move_info[0]])
+        return move_info
+
+    def get_pokemon_name(self, pokemonID):
+        return constants.pokemon_list[pokemonID-1]
+
+    def get_available_actions(self):
+        pass
 
     

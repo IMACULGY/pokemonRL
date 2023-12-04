@@ -9,12 +9,13 @@ wrapper = BattleWrapper(pyboy)
 file_like_object = open('roms/states/champ_battle_begin.state', 'rb')
 pyboy.load_state(file_like_object)
 pyboy.tick()
+print(wrapper.get_player_pokemon_info())
 # change settings to speed up the game
 pyboy.set_memory_value(0xD355, 0b11000000)
 if (not DEMO_MODE):
     while True:
         pyboy.tick()
-        #print(pyboy.get_memory_value(0xD355))
+        
 
 while True:
     num = int(input("Input an action 1-10 (0 to stop): "))
@@ -25,6 +26,6 @@ while True:
             pyboy.tick()
     if num == 12:
         print("Ticking once...")
-        self.pyboy.tick() # once, for debugging
+        pyboy.tick() # once, for debugging
     wrapper.act(num)
 pyboy.stop()

@@ -37,10 +37,24 @@ def run_manual_stepper():
     pyboy.stop()
 
 def run_random_stepper():
-    print("Welcome to the random battle stepper.")
+    #print("Welcome to the random battle stepper.")
     while wrapper.is_battle_over() == 0:
         acts = wrapper.get_available_actions()
-        selected_act = random.choice(acts)
+        moves = []
+        swaps = []
+        for a in acts:
+            if a < 5:
+                moves.append(a)
+            else:
+                swaps.append(a)
+        selected_act = 0
+        if moves and random.random() < 0.66:
+            selected_act = random.choice(moves)
+        elif swaps:
+            selected_act = random.choice(swaps)
+        else:
+            selected_act = random.choice(moves)
+        #selected_act = random.choice(acts)
         print(f"Selected action: {selected_act}")
         wrapper.act(selected_act)
     print("Battle is over. Huzzah")
@@ -55,7 +69,7 @@ file_like_object = open('roms/states/champ_battle_begin_2.state', 'rb')
 pyboy.load_state(file_like_object)
 pyboy.tick()
 wrapper = BattleWrapper(pyboy)
-#print(wrapper.get_player_pokemon_info())
+print(wrapper.get_player_pokemon_info())
 
 # change settings to speed up the game
 if SUPER_FAST_MODE: pyboy.set_emulation_speed(0)

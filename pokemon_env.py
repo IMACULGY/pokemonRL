@@ -12,11 +12,15 @@ class PokemonEnvironment():
         self.pyboy = pyboy
         self.wrapper = wrapper
         self.num_turns = 0
+        self.state_dim = 20
+        self.actions_list = list(range(1,11))
+
+    def _init_emulator(self):
         # initialize the emulator
-        pyboy.tick()
+        self.pyboy.tick()
         # change settings to speed up the game
-        #pyboy.set_emulation_speed(0)
-        pyboy.set_memory_value(0xD355, 0b11000000)
+        self.pyboy.set_emulation_speed(0)
+        self.pyboy.set_memory_value(0xD355, 0b11000000)
 
     def _get_state(self):
         """
@@ -47,12 +51,42 @@ class PokemonEnvironment():
             - Player/Enemy Attack/Def/Speed/Spec stats
             - Player/Enemy Level Stats
             - Player/Enemy Move PP
+            - Player Other Pokemon Type
+            - Player Other Pokemon Health
+            - Player Other Pokemon Moves
 
         Returns:
             - 1: the features of the state
             - 2: a list of legal actions at that state
         """
-        pass
+        player_info = self.wrapper.get_player_pokemon_info()
+        current_info = self.wrapper.get_player_current_info()
+        pokemon_index = current_info['pokemon_index']
+        enemy_info = self.wrapper.get_enemy_pokemon_info()
+        state = [
+            current_info['type1'],
+            current_info['type2'],
+            current_info['current_hp']/current_info['max_hp'],
+            current_info['status'],
+            player_info[pokemon_index]['move1'][1],
+            player_info[pokemon_index]['move1'][2],
+            player_info[pokemon_index]['move1'][3],
+            player_info[pokemon_index]['move2'][1],
+            player_info[pokemon_index]['move2'][2],
+            player_info[pokemon_index]['move2'][3],
+            player_info[pokemon_index]['move3'][1],
+            player_info[pokemon_index]['move3'][2],
+            player_info[pokemon_index]['move3'][3],
+            player_info[pokemon_index]['move4'][1],
+            player_info[pokemon_index]['move4'][2],
+            player_info[pokemon_index]['move4'][3],
+            enemy_info['type1'],
+            enemy_info['type2'],
+            enemy_info['current_hp'] / enemy_info['max_hp'],
+            enemy_info['status']
+        ]
+        legal_actions = self.wrapper.get_available_actions() if self.wrapper.is_battle_over() == 0 else []
+        return (state, legal_actions)
 
     def _get_reward(self, params):
         """
@@ -67,15 +101,14 @@ class PokemonEnvironment():
         """
         reward = -1
         # check for changes in pokemon remaining for either side
-        if params['player_pokemon_remaining'] - self.wrapper.get_player_pokemon_remaining != 0:
+        if params['player_pokemon_remaining'] - self.wrapper.get_player_pokemon_remaining() != 0:
             reward -= 10
-        if params['enemy_pokemon_remaining'] - self.wrapper.get_enemy_pokemon_remaining != 0:
+        if params['enemy_pokemon_remaining'] - self.wrapper.get_enemy_pokemon_remaining() != 0:
             reward += 10
         return reward
 
     def reset(self, seed=-1, starting=0):
         self.num_turns = 0
-        self.wrapper = BattleWrapper(self.pyboy)
         # if starting pokemon is specified, load it
         if 1 <= starting <= 6:
             file_like_object = open(f'roms/states/champ_battle_begin_{starting}.state', 'rb')
@@ -86,6 +119,8 @@ class PokemonEnvironment():
         index = random.randint(1,6)
         file_like_object = open(f'roms/states/champ_battle_begin_{index}.state', 'rb')
         self.pyboy.load_state(file_like_object)
+        self.wrapper = BattleWrapper(self.pyboy)
+        self._init_emulator()
         return self._get_state()
 
     def step(self, action):
@@ -108,6 +143,6 @@ class PokemonEnvironment():
         }
         self.wrapper.act(action)
         self.num_turns += 1
-        return self._get_state(), self._get_reward({}), self.wrapper.is_battle_over() != 0
+        return self._get_state(), self._get_reward(pokemon_remaining), self.wrapper.is_battle_over() != 0
 
 

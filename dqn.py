@@ -11,7 +11,7 @@ class Q_NN(nn.Module):
     def __init__(self, input_dim, dim_hidden_layer, output_dim):
         super(Q_NN, self).__init__()
         # initialize functions
-        self.relu = nn.RELU()
+        self.relu = nn.ReLU()
         self.elu = nn.ELU()
         self.softmax = nn.Softmax()
 
@@ -95,7 +95,9 @@ class ReplayBuffer(object):
 
     def add(self, obs, act, reward, next_obs, done):
         # create a tuple
-        trans = (obs, act, reward, next_obs, done)
+        # obs_actions = self._actions_list_to_bools(obs[1])
+        # next_obs_actions = self._actions_list_to_bools(next_obs[1])
+        trans = (obs[0], obs[1], act, reward, next_obs[0], next_obs[1], done)
 
         # interesting implementation
         if self._next_idx >= len(self._data_buffer):
@@ -106,6 +108,16 @@ class ReplayBuffer(object):
         # increase the index
         self._next_idx = (self._next_idx + 1) % self.total_size
 
+    def _actions_list_to_bools(self, lst):
+        """
+        Turns a list of legal actions into a boolean list, where each legal action
+        has a value of true, illegal actions false.
+        """
+        newlist = [False for i in range(10)]
+        for act in list:
+            newlist[act-1] = True
+        return newlist
+
     def _encode_sample(self, indices):
         """ Function to fetch the state, action, reward, next state, and done arrays.
         
@@ -113,22 +125,23 @@ class ReplayBuffer(object):
                 indices (list): list contains the index of all sampled transition tuples.
         """
         # lists for transitions
-        obs_list, actions_list, rewards_list, next_obs_list, dones_list = [], [], [], [], []
+        obs_list, obs_actions_list, actions_list, rewards_list, next_obs_list, next_obs_actions_list, dones_list = [], [], [], [], [], [], []
 
         # collect the data
         for idx in indices:
             # get the single transition
             data = self._data_buffer[idx]
-            obs, act, reward, next_obs, d = data
+            obs, obs_acts, act, reward, next_obs, next_obs_acts, d = data
             # store to the list
             obs_list.append(np.array(obs, copy=False))
+            obs_actions_list.append(np.array(obs_acts, dtype=object, copy=False))
             actions_list.append(np.array(act, copy=False))
             rewards_list.append(np.array(reward, copy=False))
             next_obs_list.append(np.array(next_obs, copy=False))
+            next_obs_actions_list.append(np.array(next_obs_acts, dtype=object, copy=False))
             dones_list.append(np.array(d, copy=False))
         # return the sampled batch data as numpy arrays
-        return np.array(obs_list), np.array(actions_list), np.array(rewards_list), np.array(next_obs_list), np.array(
-            dones_list)
+        return np.array(obs_list), np.array(obs_actions_list), np.array(actions_list), np.array(rewards_list), np.array(next_obs_list), np.array(next_obs_actions_list), np.array(dones_list)
 
     def sample_batch(self, batch_size):
         """ Args:
@@ -177,9 +190,9 @@ class DQNAgent(object):
         self.action_space = params['action_space']
 
         # create value network
-        self.behavior_policy_net = Q_NN().to(device).to(torch.float)
+        self.behavior_policy_net = Q_NN(self.obs_dim, params['hidden_layer_dim'], self.action_dim).to(device).to(torch.float)
         # create target network
-        self.target_policy_net = Q_NN().to(device).to(torch.float)
+        self.target_policy_net = Q_NN(self.obs_dim, params['hidden_layer_dim'], self.action_dim).to(device).to(torch.float)
         # initialize target network with behavior network
         if (load):
             print(f"Loading from {loadPath}")
@@ -191,19 +204,22 @@ class DQNAgent(object):
         self.target_policy_net.load_state_dict(self.behavior_policy_net.state_dict())
 
         # optimizer
-        self.optimizer = torch.optim.RMSprop(self.behavior_policy_net.parameters(), lr=params['learning_rate'])
+        self.optimizer = torch.optim.Adam(self.behavior_policy_net.parameters(), lr=params['learning_rate'])
 
     # get action
     def get_action(self, obs, eps):
         if np.random.random() < eps:  # with probability eps, the agent selects a random action
-            action = np.random.choice(self.action_space, 1)[0]
+            action = np.random.choice(obs[1], 1)[0]
             return action
         else:  # with probability 1 - eps, the agent selects a greedy policy
-            obs = self._arr_to_tensor(obs).view(1, -1)
+            obs_state = self._arr_to_tensor(obs[0]).view(1, -1)
             with torch.no_grad():
-                q_values = self.behavior_policy_net(obs)
-                action = q_values.max(dim=1)[1].item()
-            return self.action_space[int(action)]
+                q_values = self.behavior_policy_net(obs_state)
+                listed_q_values = q_values.tolist()[0]
+                new_q_values = [(listed_q_values[i-1], i-1) for i in obs[1]]
+                print(new_q_values)
+                action = max(new_q_values, key=lambda x: x[0])
+            return self.action_space[action[1]]
 
     # update behavior policy
     def update_behavior_policy(self, batch_data):
@@ -213,9 +229,12 @@ class DQNAgent(object):
         #print(batch_data_tensor)
 
         # get the transition data
+        # obs_actions and next_obs_actions will not be tensors
         obs_tensor = batch_data_tensor['obs']
+        obs_actions_tensor = batch_data_tensor['obs_actions']
         actions_tensor = batch_data_tensor['action']
         next_obs_tensor = batch_data_tensor['next_obs']
+        next_obs_actions_tensor = batch_data_tensor['next_obs_actions']
         rewards_tensor = batch_data_tensor['reward']
         dones_tensor = batch_data_tensor['done']
 
@@ -225,7 +244,14 @@ class DQNAgent(object):
 
         # compute the TD target using the target network
         # get next state values
-        maxvalues = self.target_policy_net(next_obs_tensor).max(1)[0].detach()
+        target_policy_values = self.target_policy_net(next_obs_tensor)
+        maxvalues = []
+        for i in range(len(target_policy_values)):
+            listed_vals = target_policy_values[i].tolist()
+            new_q_values = [listed_vals[j-1] for j in next_obs_actions_tensor[i]]
+            maxvalues.append(max(new_q_values))
+
+        maxvalues = self.target_policy_net(next_obs_tensor).gather(1,next_obs_actions_tensor).max(1)[0].detach()
         #print(f"MAX: {maxvalues}")
 
         target = torch.zeros(self.params['batch_size'])
@@ -251,22 +277,21 @@ class DQNAgent(object):
     # update update target policy
     def update_target_policy(self):
         # hard update
-        """CODE HERE: 
-                Copy the behavior policy network to the target network
-        """
+        # copy the behavior policy to the target policy
         self.target_policy_net.load_state_dict(self.behavior_policy_net.state_dict())
 
     # auxiliary functions
     def _arr_to_tensor(self, arr):
         arr = np.array(arr)
+        print(arr)
         arr_tensor = torch.from_numpy(arr).float().to(self.device)
         return arr_tensor
 
     def _batch_to_tensor(self, batch_data):
         # store the tensor
-        batch_data_tensor = {'obs': [], 'action': [], 'reward': [], 'next_obs': [], 'done': []}
+        batch_data_tensor = {'obs': [], 'obs_actions':[], 'action': [], 'reward': [], 'next_obs': [], 'next_obs_actions': [], 'done': []}
         # get the numpy arrays
-        obs_arr, action_arr, reward_arr, next_obs_arr, done_arr = batch_data
+        obs_arr, obs_actions_arr, action_arr, reward_arr, next_obs_arr, next_obs_actions_arr, done_arr = batch_data
         # convert to tensors
         batch_data_tensor['obs'] = torch.tensor(obs_arr, dtype=torch.float32).to(self.device)
         batch_data_tensor['action'] = torch.tensor(action_arr).long().view(-1, 1).to(self.device)
@@ -297,7 +322,7 @@ def train_dqn_agent(env, params):
     loss = 0
 
     # reset the environment
-    obs, _ = env.reset()
+    obs = env.reset()
 
     # start training
     pbar = tqdm.trange(params['total_training_time_step'])
@@ -309,10 +334,10 @@ def train_dqn_agent(env, params):
         action = my_agent.get_action(obs, eps_t)
 
         # step in the environment
-        next_obs, reward, done, _, _ = env.step(action)
+        next_obs, reward, done = env.step(action)
 
         # add to the buffer
-        replay_buffer.add(obs, env.action_names.index(action), reward, next_obs, done)
+        replay_buffer.add(obs, env.actions_list.index(action), reward, next_obs, done)
         rewards.append(reward)
 
         # check termination
@@ -323,7 +348,9 @@ def train_dqn_agent(env, params):
                 G = r + params['gamma'] * G
 
             if G > last_best_return:
+                print('saving new model...')
                 torch.save(my_agent.behavior_policy_net.state_dict(), f"./{params['model_name']}")
+                last_best_return = G
 
             # store the return
             train_returns.append(G)
@@ -338,7 +365,7 @@ def train_dqn_agent(env, params):
 
             # reset the environment
             episode_t, rewards = 0, []
-            obs, _ = env.reset()
+            obs = env.reset()
         else:
             # increment
             obs = next_obs

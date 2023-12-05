@@ -121,10 +121,10 @@ class BattleWrapper():
             # if the enemy pokemon has fainted, do an update
             if not killed_a_pokemon and self.get_enemy_pokemon_info()['current_hp'] == 0:
                 killed_a_pokemon = True
-                print("You killed somebody.")
+                #print("You killed somebody.")
                 self.enemy_pokemon_remaining -= 1
             if self.is_battle_over() != 0:
-                print("It's over.")
+                #print("It's over.")
                 # you win or lose
                 break
 
@@ -200,11 +200,12 @@ class BattleWrapper():
             "type2":self.pyboy.get_memory_value(0xCFEB),
             "current_hp":self.pyboy.get_memory_value(0xCFE6) * 256 + self.pyboy.get_memory_value(0xCFE7),
             "max_hp":self.pyboy.get_memory_value(0xCFF4) * 256 + self.pyboy.get_memory_value(0xCFF5),
+            "status":self.pyboy.get_memory_value(0xCFE9)
         }
         return enemy_info
 
     def get_player_pokemon_remaining(self):
-        return len(self.get_player_pokemon_available)
+        return len(self.get_player_pokemon_available())
 
     def get_enemy_pokemon_remaining(self):
         return self.enemy_pokemon_remaining
@@ -212,6 +213,7 @@ class BattleWrapper():
     def get_move_info(self, moveID):
         move_info = [constants.moves_list[moveID-1]]
         move_info.extend(constants.moves[move_info[0]])
+        move_info[1] = constants.types[move_info[1]]
         return move_info
 
     def get_pokemon_name(self, pokemonID):

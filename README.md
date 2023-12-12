@@ -14,7 +14,7 @@ The emulator is provided by the useful module [pyboy](https://github.com/Baekalf
 
 The wrapper code for Pokemon Red is written by me, and located in [`battle_wrapper.py`](battle_wrapper.py). The demo for this wrapper is located at [`emu_demo.py`](emu_demo.py). There are some variables at the top of the file that you may change. To fully control the emulator with arrow keys, X, and Z, set `DEMO_MODE` to false. There are two demo modes, a manual stepper and a random stepper. Change which one to use by editing `MANUAL_STEP_MODE`. Be advised, the manual stepper will ask for user input.
 
-Any files for game ROMs, RAMs, and states are located in the [/roms](/roms/) directory.
+Any files for game ROMs, RAMs, and states are located in the [`/roms`](/roms/) directory.
 
 ### Model Training
 
@@ -30,6 +30,6 @@ To demo my experiments, run the script [`dqn_demo.py`](dqn_demo.py). There are a
 
 The results from my two experiments are located in the notebook file, [run_experiments_plots.ipynb](run_experiments_plots.ipynb).
 
-Any data generated from my experiments is located in the [`data`](/data/) folder.
+Any data generated from my experiments is located in the [`/data`](/data/) folder.
 
 ## Gallery

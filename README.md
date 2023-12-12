@@ -12,7 +12,7 @@ After getting the source code, grab all the necessary requirements for the proje
 
 The emulator is provided by the useful module [pyboy](https://github.com/Baekalfen/PyBoy).
 
-The wrapper code for Pokemon Red is written by me, and located in [`battle_wrapper.py`](battle_wrapper.py). The demo for this wrapper is located at [`emu_demo.py`](emu_demo.py). There are some variables at the top of the file that you may change. To just run the battle emulator on its own, set `DEMO_MODE` to false. There are two demo modes, a manual stepper and a random stepper. Change which one to use by editing `MANUAL_STEP_MODE`. Be advised, the manual stepper will ask for user input.
+The wrapper code for Pokemon Red is written by me, and located in [`battle_wrapper.py`](battle_wrapper.py). The demo for this wrapper is located at [`emu_demo.py`](emu_demo.py). There are some variables at the top of the file that you may change. To fully control the emulator with arrow keys, X, and Z, set `DEMO_MODE` to false. There are two demo modes, a manual stepper and a random stepper. Change which one to use by editing `MANUAL_STEP_MODE`. Be advised, the manual stepper will ask for user input.
 
 Any files for game ROMs, RAMs, and states are located in the [/roms](/roms/) directory.
 

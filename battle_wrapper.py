@@ -1,5 +1,6 @@
 from pyboy import PyBoy, WindowEvent
 import constants
+import time
 
 inputs = {
     'left': [WindowEvent.PRESS_ARROW_LEFT, WindowEvent.RELEASE_ARROW_LEFT],
@@ -10,6 +11,8 @@ inputs = {
     'b': [WindowEvent.PRESS_BUTTON_B, WindowEvent.RELEASE_BUTTON_B],
 }
 
+# Universal index map for the 6 available Pokemon
+# (they will be in a different order in the users' party in each episode)
 pokemon_map = [
     'Pikachu',
     'Charizard',
@@ -58,7 +61,7 @@ class BattleWrapper():
         9 - Pidgeot
         10 - Snorlax
     """
-    def act(self, action):
+    def act(self, action, timeout=5):
         if 1 <= action <= 4:
             self.press_and_release('a')
             # figure out where the cursor and navigate to the next move
@@ -96,17 +99,22 @@ class BattleWrapper():
             # it could have probably saved me hours
             # i am the goat of making the worlds worst solutions to these problems
             self.pyboy.set_memory_value(0xcc29, 0)
-            self.progress_to_next_battle_screen([3,17])
+            self.progress_to_next_battle_screen([3,17], timeout)
         
-        self.progress_to_next_battle_screen([3,17])
+        self.progress_to_next_battle_screen([3,17], timeout)
 
     """
     Spam A until one of the next screens shows up.
     Screens:
         3 - Switch pokemon screen
         17 - Main battle screen
+
+    Raises an exception if it takes too long to get to the next screen
+    (Specified by parameter __timeout__)
     """
-    def progress_to_next_battle_screen(self, screens):
+    def progress_to_next_battle_screen(self, screens, timeout=5):
+        start_time = time.time()
+        self.pyboy
         current_screen = self.pyboy.get_memory_value(0xCC29)
         # 17 - battle screen
         # 3 - select a pokemon
@@ -127,6 +135,8 @@ class BattleWrapper():
                 #print("It's over.")
                 # you win or lose
                 break
+            if time.time() - start_time > timeout:
+                raise Exception("Timeout")
 
         self.pyboy.tick()
         self.pyboy.tick()
@@ -155,6 +165,7 @@ class BattleWrapper():
                 "level": self.pyboy.get_memory_value(o + 33),
                 "type1": self.pyboy.get_memory_value(o + 5),
                 "type2": self.pyboy.get_memory_value(o + 6),
+                "status": self.pyboy.get_memory_value(o + 4),
                 "current_hp": self.pyboy.get_memory_value(o + 1) * 256 + self.pyboy.get_memory_value(o + 2),
                 "max_hp": self.pyboy.get_memory_value(o + 34) * 256 + self.pyboy.get_memory_value(o + 35),
                 "move1": self.get_move_info(self.pyboy.get_memory_value(o + 8)),

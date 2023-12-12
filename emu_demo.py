@@ -7,8 +7,8 @@ SUPER_FAST_MODE = True
 # turn this on if you want to demo the battle stepper
 DEMO_MODE = True
 # turn me on if you want to step through the actions manually
+# otherwise, we will demo it by executing actions randomly until the battle ends
 MANUAL_STEP_MODE = False
-# otherwise, we will demo it by executing actions randomly until the battle ends!
 
 """
 Some Demo Functions
@@ -78,7 +78,7 @@ pyboy.set_memory_value(0xD355, 0b11000000)
 if not DEMO_MODE:
     while True:
         pyboy.tick()
-        wrapper.debug_print(0xCC29)
+        #wrapper.debug_print(0xCC29)
         #wrapper.debug_print(0xD059)
         #0xc4b9, one of the text bits
         #0xc4f2, bottom right where the cursor is blinking

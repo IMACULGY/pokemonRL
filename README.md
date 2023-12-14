@@ -2,7 +2,7 @@
 
 ![image](https://github.com/IMACULGY/pokemonRL/assets/32719081/7aa0dcc8-3801-4059-a1b5-5d63782ba0e9)
 
-Code for my experiments with training a battle agent for the original Pokemon Red. Read the report here (soon).
+Code for my experiments with training a battle agent for the original Pokemon Red. Read the report [here](https://drive.google.com/file/d/1g5IZjcuGsi62v4ozTnc4QyaWhndHgTgU/view?usp=sharing).
 
 ## How to Run
 
